@@ -1,0 +1,49 @@
+name: Publish Battles of History from MovieQuest
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/30 * * * *'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: battlesofhistory-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout master MovieQuest source
+        uses: actions/checkout@v4
+        with:
+          repository: movieqst/MovieQuest
+          ref: main
+          path: source
+          persist-credentials: false
+
+      - name: Prepare standalone Battles of History website
+        run: |
+          mkdir -p site
+          cp -a source/battlesofhistory/. site/
+          printf '%s\n' 'battlesofhistory.com' > site/CNAME
+          touch site/.nojekyll
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload website
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy website
+        id: deployment
+        uses: actions/deploy-pages@v4
